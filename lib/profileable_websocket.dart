@@ -1,5 +1,6 @@
 // lib/profileable_websocket.dart
 
+import 'connection_summary.dart';
 import 'dart:async';
 import 'dart:io';
 
@@ -9,6 +10,7 @@ import 'event_buffer.dart';
 class ProfileableWebSocket {
   final WebSocket _inner;
   final EventBuffer _buffer;
+  final ConnectionSummary summary = ConnectionSummary();
 
   ProfileableWebSocket._(this._inner, this._buffer);
 
@@ -19,7 +21,9 @@ class ProfileableWebSocket {
   }) async {
     final socket = await WebSocket.connect(url);
     final buffer = EventBuffer(capacity: bufferSize);
-    return ProfileableWebSocket._(socket, buffer);
+    final profiler = ProfileableWebSocket._(socket, buffer);
+    profiler._logLifecycle('connected');
+    return profiler;
   }
 
   /// Expose recent events
@@ -29,6 +33,8 @@ class ProfileableWebSocket {
   void add(dynamic data) {
     _logOutgoing(data);
     _inner.add(data);
+    summary.messagesSent++;
+    summary.totalSentBytes += _calculateSize(data);
   }
 
   /// INCOMING interception
@@ -39,12 +45,29 @@ class ProfileableWebSocket {
     bool? cancelOnError,
   }) {
     return _inner.listen(
-      (data) {
-        _logIncoming(data);
-        onData?.call(data);
+      (message) {
+        _logIncoming(message);
+        summary.messagesReceived++;
+        summary.totalReceivedBytes += _calculateSize(message);
+        onData?.call(message);
       },
-      onError: onError,
-      onDone: onDone,
+      onError: (error) {
+        summary.errorOccurred = true;
+        summary.closedAt = DateTime.now();
+        summary.closeReason = 'Connection closed due to error';
+        _logLifecycle('error');
+        if (onError != null) {
+          onError(error);
+        }
+      },
+      onDone: () {
+        summary.closedAt = DateTime.now();
+        summary.closeReason = 'Connection closed normally';
+        _logLifecycle('disconnected');
+        if (onDone != null) {
+          onDone();
+        }
+      },
       cancelOnError: cancelOnError,
     );
   }
@@ -65,17 +88,22 @@ class ProfileableWebSocket {
       direction: FrameDirection.outgoing,
       type: _detectType(data),
       size: _calculateSize(data),
+      label: 'sent',
     );
-
     _buffer.add(event);
   }
 
+  bool _greetingLogged = false;
   void _logIncoming(dynamic data) {
+    final label = !_greetingLogged ? 'server greeting' : 'received';
+    _greetingLogged = true;
+
     final event = WebSocketEvent(
       timestamp: DateTime.now(),
       direction: FrameDirection.incoming,
       type: _detectType(data),
       size: _calculateSize(data),
+      label: label,
       preview: data is String ? data : null,
     );
 
@@ -96,5 +124,16 @@ class ProfileableWebSocket {
       return data.length;
     }
     return 0;
+  }
+
+  void _logLifecycle(String label) {
+    final event = WebSocketEvent(
+      timestamp: DateTime.now(),
+      direction: FrameDirection.internal,
+      type: FrameType.binary,
+      size: 0,
+      label: label,
+    );
+    _buffer.add(event);
   }
 }

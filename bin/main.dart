@@ -8,29 +8,21 @@ enum AppMode { menu, test }
 Future<void> main() async {
   const url = 'wss://echo.websocket.org';
 
-  print('Connecting to $url...');
-  final socket = await ProfileableWebSocket.connect(url);
-  print('Connected!\n');
-
   AppMode mode = AppMode.menu;
+  ProfileableWebSocket? socket;
+  ProfileableWebSocket? lastSocket;
+  bool isConnected = false;
 
   void showMenu() {
-    print('\n=== WebSocket Profiler ===');
-    print('1. Test Mode (Send Messages)');
-    print('2. View Logs');
-    print('3. Exit');
+    final statusIcon = isConnected ? '🟢' : '🔴';
+    print('=== WebSocket Profiler ===');
+    print('1. Toggle Connection (On/Off): $statusIcon');
+    print('2. Test Mode (Send Messages)');
+    print('3. View Logs');
+    print('4. View Connection Summary');
+    print('5. Exit');
     stdout.write('Select option: ');
   }
-
-  socket.listen((data) {
-    print('Echo received: $data\n');
-
-    if (mode == AppMode.menu) {
-      stdout.write('Select option: ');
-    } else if (mode == AppMode.test) {
-      stdout.write('Type messages. Type "back" to return.\n> ');
-    }
-  });
 
   showMenu();
 
@@ -38,14 +30,41 @@ Future<void> main() async {
       in stdin.transform(utf8.decoder).transform(const LineSplitter())) {
     if (mode == AppMode.menu) {
       if (line == '1') {
+        if (!isConnected) {
+          print('Connecting to $url...');
+          socket = await ProfileableWebSocket.connect(url);
+          lastSocket = socket;
+          isConnected = true;
+
+          socket.listen((data) {
+            print('Echo received: $data\n');
+            if (mode == AppMode.menu) {
+              stdout.write('Select option: ');
+            } else if (mode == AppMode.test) {
+              stdout.write('Type messages. Type "back" to return.\n> ');
+            }
+          });
+
+          print('Connected.\n');
+        } else {
+          await socket!.close();
+          socket = null;
+          isConnected = false;
+          print('Disconnected.\n');
+        }
+        showMenu();
+      } else if (line == '2') {
+        if (!isConnected) {
+          print('Please connect first.\n');
+          showMenu();
+          continue;
+        }
         mode = AppMode.test;
         print('\n--- Test Mode ---');
-        print('');
         stdout.write('Type messages. Type "back" to return.\n> ');
-      } else if (line == '2') {
+      } else if (line == '3') {
         print('\n--- Recent WebSocket Events ---');
-
-        final events = socket.recentEvents;
+        final events = lastSocket?.recentEvents ?? [];
         if (events.isEmpty) {
           print('No events recorded yet.');
         } else {
@@ -53,12 +72,21 @@ Future<void> main() async {
             print(event.formatted);
           }
         }
-
         print('-------------------------------\n');
         showMenu();
-      } else if (line == '3') {
-        await socket.close();
-        print('Disconnected.');
+      } else if (line == '4') {
+        print('\n--- Connection Summary ---');
+        if (lastSocket == null) {
+          print('No connection history available.');
+        } else {
+          lastSocket.summary.printSummary();
+        }
+        showMenu();
+      } else if (line == '5') {
+        if (isConnected && socket != null) {
+          await socket.close();
+        }
+        print('Goodbye!');
         break;
       } else {
         print('Invalid option.');
@@ -69,7 +97,7 @@ Future<void> main() async {
         mode = AppMode.menu;
         showMenu();
       } else {
-        socket.add(line);
+        socket?.add(line);
       }
     }
   }

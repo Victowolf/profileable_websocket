@@ -1,8 +1,8 @@
 // lib/websocket_event.dart
 
-enum FrameDirection { incoming, outgoing }
+enum FrameDirection { incoming, outgoing, internal }
 
-enum FrameType { text, binary }
+enum FrameType { text, binary, lifecycle }
 
 class WebSocketEvent {
   final DateTime timestamp;
@@ -10,6 +10,7 @@ class WebSocketEvent {
   final FrameType type;
   final int size;
   final String? preview;
+  final String? label;
 
   WebSocketEvent({
     required this.timestamp,
@@ -17,26 +18,19 @@ class WebSocketEvent {
     required this.type,
     required this.size,
     this.preview,
+    this.label,
   });
 
   String get formatted {
-    final time =
-        "${timestamp.hour.toString().padLeft(2, '0')}:"
-        "${timestamp.minute.toString().padLeft(2, '0')}:"
-        "${timestamp.second.toString().padLeft(2, '0')}."
-        "${timestamp.millisecond.toString().padLeft(3, '0')}";
-
-    final dir = direction == FrameDirection.outgoing ? "OUT" : "IN ";
-    final t = type == FrameType.text ? "TEXT  " : "BINARY";
-
-    String annotation = "";
-
-    if (direction == FrameDirection.incoming &&
-        preview != null &&
-        preview!.startsWith("Request served by")) {
-      annotation = " (server greeting received)";
-    }
-
-    return "[$time] $dir | $t | $size bytes$annotation";
+    final time = '[${timestamp.toLocal().toIso8601String().substring(11, 23)}]';
+    final dir = direction == FrameDirection.incoming
+        ? 'IN '
+        : direction == FrameDirection.outgoing
+        ? 'OUT'
+        : 'LC ';
+    final typeStr = type.toString().split('.').last.toUpperCase().padRight(6);
+    final sizeStr = '$size bytes'.padRight(10);
+    final labelStr = label != null ? '| ${label!}' : '';
+    return '$time $dir | $typeStr | $sizeStr $labelStr';
   }
 }
