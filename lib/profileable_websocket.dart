@@ -31,6 +31,8 @@ class ProfileableWebSocket {
 
   /// OUTGOING interception
   void add(dynamic data) {
+    final now = DateTime.now();
+    _lastSentTime = now;
     _logOutgoing(data);
     _inner.add(data);
     summary.messagesSent++;
@@ -46,7 +48,13 @@ class ProfileableWebSocket {
   }) {
     return _inner.listen(
       (message) {
-        _logIncoming(message);
+        final now = DateTime.now();
+        Duration? latency;
+        if (_lastSentTime != null) {
+          latency = now.difference(_lastSentTime!);
+          summary.addLatency(latency);
+        }
+        _logIncoming(message, timestamp: now, latency: latency);
         summary.messagesReceived++;
         summary.totalReceivedBytes += _calculateSize(message);
         onData?.call(message);
@@ -82,29 +90,32 @@ class ProfileableWebSocket {
   // Internal Logging
   // --------------------------
 
-  void _logOutgoing(dynamic data) {
+  void _logOutgoing(dynamic data, {DateTime? timestamp}) {
     final event = WebSocketEvent(
-      timestamp: DateTime.now(),
+      timestamp: timestamp ?? DateTime.now(),
       direction: FrameDirection.outgoing,
       type: _detectType(data),
       size: _calculateSize(data),
       label: 'sent',
     );
+
     _buffer.add(event);
   }
 
   bool _greetingLogged = false;
-  void _logIncoming(dynamic data) {
+  DateTime? _lastSentTime;
+  void _logIncoming(dynamic data, {DateTime? timestamp, Duration? latency}) {
     final label = !_greetingLogged ? 'server greeting' : 'received';
     _greetingLogged = true;
 
     final event = WebSocketEvent(
-      timestamp: DateTime.now(),
+      timestamp: timestamp ?? DateTime.now(),
       direction: FrameDirection.incoming,
       type: _detectType(data),
       size: _calculateSize(data),
       label: label,
       preview: data is String ? data : null,
+      latency: latency,
     );
 
     _buffer.add(event);
@@ -134,6 +145,7 @@ class ProfileableWebSocket {
       size: 0,
       label: label,
     );
+
     _buffer.add(event);
   }
 }

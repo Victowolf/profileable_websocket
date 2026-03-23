@@ -65,12 +65,28 @@ Future<void> main() async {
       } else if (line == '3') {
         print('\n--- Recent WebSocket Events ---');
         final events = lastSocket?.recentEvents ?? [];
+        print('logs:\n');
         if (events.isEmpty) {
           print('No events recorded yet.');
         } else {
+          print(
+            'TIME          DIR  | TYPE   | SIZE       | LABEL            | LATENCY',
+          );
+          print(
+            '-------------------------------------------------------------------',
+          );
           for (final event in events) {
             print(event.formatted);
           }
+        }
+        print('\njson:\n');
+        if (events.isEmpty) {
+          print('No events recorded yet.');
+        } else {
+          final jsonLogs = events.map((e) => e.toJson()).toList();
+
+          const encoder = JsonEncoder.withIndent('  ');
+          print(encoder.convert(jsonLogs));
         }
         print('-------------------------------\n');
         showMenu();
