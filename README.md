@@ -11,12 +11,14 @@ It intercepts:
 
 And records:
 
-- Timestamp
-- Direction (IN / OUT)
-- Frame type (TEXT / BINARY)
-- Size (bytes)
-- System frame classification (e.g., server greeting)
-- Lifecycle events (connect, disconnect, error)
+- Timestamp (v1)
+- Direction (IN / OUT) (v1)
+- Frame type (TEXT / BINARY) (v1)
+- Size (bytes) (v1)
+- System frame classification (e.g., server greeting) (v1)
+- Lifecycle events (connect, disconnect, error) (v2)
+- Per-frame latency (v3)
+- JSON export support (v3)
 
 ---
 
@@ -58,7 +60,7 @@ websocket_profiler/
 │   └── main.dart                  # CLI entry point (menu-driven interface)
 │
 ├── lib/
-│   ├── websocket_event.dart       # Frame event model + formatting
+│   ├── websocket_event.dart       # Frame event model + formatting + toJson
 │   ├── event_buffer.dart          # Bounded FIFO event storage
 |   ├── connection_summary.dart    # Connection stats model + printer
 │   └── profileable_websocket.dart # WebSocket wrapper (core logic)
@@ -71,7 +73,6 @@ websocket_profiler/
 # Demo Run Flow
 
 ```
-PS D:\imp\projects\internship\websocket_profiler> dart run bin/main.dart
 === WebSocket Profiler ===
 1. Toggle Connection (On/Off): 🔴
 2. Test Mode (Send Messages)
@@ -94,20 +95,20 @@ Select option: 2
 
 --- Test Mode ---
 Type messages. Type "back" to return.
-> hii
-Echo received: hii
+> Hi
+Echo received: Hi
 
 Type messages. Type "back" to return.
-> hello
-Echo received: hello
+> Hello!!
+Echo received: Hello!!
 
 Type messages. Type "back" to return.
-> how are you?
-Echo received: how are you?
+> How are you?
+Echo received: How are you?
 
 Type messages. Type "back" to return.
-> x0x
-Echo received: x0x
+> xox
+Echo received: xox
 
 Type messages. Type "back" to return.
 > back
@@ -129,17 +130,114 @@ Disconnected.
 Select option: 3
 
 --- Recent WebSocket Events ---
-[13:16:26.564] LC  | BINARY | 0 bytes    | connected
-[13:16:26.564] IN  | TEXT   | 32 bytes   | server greeting
-[13:16:31.499] OUT | TEXT   | 3 bytes    | sent
-[13:16:31.744] IN  | TEXT   | 3 bytes    | received
-[13:16:34.843] OUT | TEXT   | 5 bytes    | sent
-[13:16:35.094] IN  | TEXT   | 5 bytes    | received
-[13:16:39.582] OUT | TEXT   | 12 bytes   | sent
-[13:16:39.822] IN  | TEXT   | 12 bytes   | received
-[13:16:44.779] OUT | TEXT   | 3 bytes    | sent
-[13:16:45.022] IN  | TEXT   | 3 bytes    | received
-[13:16:53.545] LC  | BINARY | 0 bytes    | disconnected
+logs:
+
+TIME          DIR  | TYPE   | SIZE       | LABEL            | LATENCY
+-------------------------------------------------------------------
+[12:34:13.112] LC  | BINARY | 0 bytes    | connected        |
+[12:34:13.112] IN  | TEXT   | 32 bytes   | server greeting  |
+[12:34:23.837] OUT | TEXT   | 2 bytes    | sent             |
+[12:34:24.015] IN  | TEXT   | 2 bytes    | received         | 178 ms
+[12:34:30.489] OUT | TEXT   | 7 bytes    | sent             |
+[12:34:30.717] IN  | TEXT   | 7 bytes    | received         | 227 ms
+[12:34:40.831] OUT | TEXT   | 12 bytes   | sent             |
+[12:34:40.999] IN  | TEXT   | 12 bytes   | received         | 168 ms
+[12:34:43.315] OUT | TEXT   | 3 bytes    | sent             |
+[12:34:43.485] IN  | TEXT   | 3 bytes    | received         | 170 ms
+[12:34:49.461] LC  | BINARY | 0 bytes    | disconnected     |
+
+json:
+
+[
+  {
+    "timestamp": "2026-03-23T12:34:13.112314",
+    "direction": "internal",
+    "type": "binary",
+    "size": 0,
+    "label": "connected",
+    "latency_ms": null
+  },
+  {
+    "timestamp": "2026-03-23T12:34:13.112314",
+    "direction": "incoming",
+    "type": "text",
+    "size": 32,
+    "label": "server greeting",
+    "latency_ms": null
+  },
+  {
+    "timestamp": "2026-03-23T12:34:23.837267",
+    "direction": "outgoing",
+    "type": "text",
+    "size": 2,
+    "label": "sent",
+    "latency_ms": null
+  },
+  {
+    "timestamp": "2026-03-23T12:34:24.015850",
+    "direction": "incoming",
+    "type": "text",
+    "size": 2,
+    "label": "received",
+    "latency_ms": 178
+  },
+  {
+    "timestamp": "2026-03-23T12:34:30.489416",
+    "direction": "outgoing",
+    "type": "text",
+    "size": 7,
+    "label": "sent",
+    "latency_ms": null
+  },
+  {
+    "timestamp": "2026-03-23T12:34:30.717343",
+    "direction": "incoming",
+    "type": "text",
+    "size": 7,
+    "label": "received",
+    "latency_ms": 227
+  },
+  {
+    "timestamp": "2026-03-23T12:34:40.831068",
+    "direction": "outgoing",
+    "type": "text",
+    "size": 12,
+    "label": "sent",
+    "latency_ms": null
+  },
+  {
+    "timestamp": "2026-03-23T12:34:40.999620",
+    "direction": "incoming",
+    "type": "text",
+    "size": 12,
+    "label": "received",
+    "latency_ms": 168
+  },
+  {
+    "timestamp": "2026-03-23T12:34:43.315407",
+    "direction": "outgoing",
+    "type": "text",
+    "size": 3,
+    "label": "sent",
+    "latency_ms": null
+  },
+  {
+    "timestamp": "2026-03-23T12:34:43.485827",
+    "direction": "incoming",
+    "type": "text",
+    "size": 3,
+    "label": "received",
+    "latency_ms": 170
+  },
+  {
+    "timestamp": "2026-03-23T12:34:49.461520",
+    "direction": "internal",
+    "type": "binary",
+    "size": 0,
+    "label": "disconnected",
+    "latency_ms": null
+  }
+]
 -------------------------------
 
 === WebSocket Profiler ===
@@ -153,14 +251,28 @@ Select option: 4
 --- Connection Summary ---
 
 --- WebSocket Connection Summary ---
-Connection Started: 2026-03-19 13:16:26.564561
-Connection Closed : 2026-03-19 13:16:53.545171
-Duration          : 26s
+Connection Started: 2026-03-23 12:34:13.112314
+Connection Closed : 2026-03-23 12:34:49.461520
+Duration          : 36s
 Messages Sent     : 4
 Messages Received : 5
-Bytes Sent        : 23
-Bytes Received    : 55
+Bytes Sent        : 24
+Bytes Received    : 56
+Avg Latency       : 185.75 ms
 Close Reason      : Connection closed normally
+json:
+{
+  "connected_at": "2026-03-23T12:34:13.112314",
+  "closed_at": "2026-03-23T12:34:49.461520",
+  "duration_sec": 36,
+  "messages_sent": 4,
+  "messages_received": 5,
+  "bytes_sent": 24,
+  "bytes_received": 56,
+  "avg_latency_ms": 185.75,
+  "error": false,
+  "close_reason": "Connection closed normally"
+}
 -----------------------------------
 
 === WebSocket Profiler ===
@@ -171,7 +283,6 @@ Close Reason      : Connection closed normally
 5. Exit
 Select option: 5
 Goodbye!
-PS D:\imp\projects\internship\websocket_profiler> 
 ```
 
 ---
@@ -192,6 +303,8 @@ PS D:\imp\projects\internship\websocket_profiler>
   - Message counts
   - Byte totals
   - Error/close reason
+- Formatted CLI log view with color coding (v3)
+- Structured JSON log export (v3)
 
 
 ---
@@ -227,5 +340,11 @@ This prototype successfully demonstrates:
 - Clean architectural separation
 - Async-safe CLI design
 - DevTools-compatible interception foundation
+- Human-friendly profiling (formatted CLI logs with latency, lifecycle, color)
+- Machine-readable output (JSON logs & summaries)
 
 It provides a solid base for expanding WebSocket support in Dart DevTools or evolving into a standalone WebSocket analysis tool.
+
+# 🔗 Discussions
+
+Follow development updates in [Discussions → Progress Log](https://github.com/Victowolf/profileable_websocket/discussions/1)
