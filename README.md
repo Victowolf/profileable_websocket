@@ -19,6 +19,7 @@ And records:
 - Lifecycle events (connect, disconnect, error) (v2)
 - Per-frame latency (v3)
 - JSON export support (v3)
+- Testing & Licensing support (v4)
 
 ---
 
@@ -62,12 +63,40 @@ websocket_profiler/
 ├── lib/
 │   ├── websocket_event.dart       # Frame event model + formatting + toJson
 │   ├── event_buffer.dart          # Bounded FIFO event storage
-|   ├── connection_summary.dart    # Connection stats model + printer
+│   ├── connection_summary.dart    # Connection stats model + printer
 │   └── profileable_websocket.dart # WebSocket wrapper (core logic)
 │
+├── test/
+│   └── websocket_event_test.dart  # Unit tests for WebSocketEvent
+│
+├── LICENSE.md                     # MIT License 
+├── CHANGELOG.md                   # Version-wise changes 
 └── pubspec.yaml
 
 ```
+---
+
+# Features Implemented
+
+- Frame-level interception (`add()`, `listen()`)
+- Direction-based logging (IN / OUT)
+- Lifecycle events (connect / disconnect / error)
+- Frame type detection (TEXT / BINARY)
+- Byte size tracking
+- Timestamped logs (ms precision)
+- Server greeting detection
+- Bounded buffer (FIFO)
+- Interactive CLI
+- Connection summary with:
+  - Duration
+  - Message counts
+  - Byte totals
+  - Error/close reason
+- Formatted CLI log view with color coding (v3)
+- Structured JSON log export (v3)
+- Foundational testing and licensing support
+
+
 ---
 
 # Demo Run Flow
@@ -287,28 +316,6 @@ Goodbye!
 
 ---
 
-# Features Implemented
-
-- Frame-level interception (`add()`, `listen()`)
-- Direction-based logging (IN / OUT)
-- Lifecycle events (connect / disconnect / error)
-- Frame type detection (TEXT / BINARY)
-- Byte size tracking
-- Timestamped logs (ms precision)
-- Server greeting detection
-- Bounded buffer (FIFO)
-- Interactive CLI
-- Connection summary with:
-  - Duration
-  - Message counts
-  - Byte totals
-  - Error/close reason
-- Formatted CLI log view with color coding (v3)
-- Structured JSON log export (v3)
-
-
----
-
 # Running Locally
 
 ## 1️) Prerequisites
@@ -342,6 +349,7 @@ This prototype successfully demonstrates:
 - DevTools-compatible interception foundation
 - Human-friendly profiling (formatted CLI logs with latency, lifecycle, color)
 - Machine-readable output (JSON logs & summaries)
+- Testing & Licensing support (v4)
 
 It provides a solid base for expanding WebSocket support in Dart DevTools or evolving into a standalone WebSocket analysis tool.
 
