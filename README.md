@@ -313,6 +313,8 @@ json:
 Select option: 5
 Goodbye!
 ```
+Coloured ouput:
+![Coloured logs](assets\Coloured_logs.png)
 
 ---
 
