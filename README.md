@@ -313,8 +313,9 @@ json:
 Select option: 5
 Goodbye!
 ```
-Coloured ouput:
-![Coloured logs](assets\Coloured_logs.png)
+## Coloured logs:
+
+![Coloured logs](https://github.com/Victowolf/profileable_websocket/blob/main/assets/Coloured_logs.png)
 
 ---
 
